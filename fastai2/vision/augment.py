@@ -315,7 +315,8 @@ def affine_coord(x: TensorPoint, mat=None, coord_tfm=None, sz=None, mode='neares
     #assert pad_mode==PadMode.Zeros, "Only zero padding is supported for `TensorPoint` and `TensorBBox`"
     if sz is None: sz = x.get_meta('img_size')
     if coord_tfm is not None: x = coord_tfm(x, invert=True)
-    if mat is not None: x = (x - mat[:,:,2].unsqueeze(1)) @ torch.inverse(mat[:,:,:2].transpose(1,2))
+    #if mat is not None: x = (x - mat[:,:,2].unsqueeze(1)) @ torch.inverse(mat[:,:,:2].transpose(1,2))
+    if mat is not None: x = (x - mat[:,:,2].unsqueeze(1)) @ torch.inverse(mat[:,:,:2].to('cpu').transpose(1,2)).to(torch.cuda.current_device())
     return TensorPoint(x, sz=sz)
 
 @patch
@@ -576,7 +577,7 @@ def find_coeffs(p1, p2):
     #The 8 scalars we seek are solution of AX = B
     A = stack(m).permute(2, 0, 1)
     B = p1.view(p1.shape[0], 8, 1)
-    return torch.solve(B,A)[0]
+    return torch.solve(B.to('cpu'),A.to('cpu'))[0].to(torch.cuda.current_device())#return torch.solve(B,A)[0]
 
 # Cell
 def apply_perspective(coords, coeffs):
